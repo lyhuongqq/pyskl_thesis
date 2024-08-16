@@ -1,9 +1,16 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import os.path as osp
+import sys
+import os
 
-from .base import BaseDataset
-from .builder import DATASETS
+# Add the parent directory to the sys.path
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
+#from .base import BaseDataset
+#from .builder import DATASETS
+from pyskl.datasets.base import BaseDataset
+from pyskl.datasets.builder import DATASETS
 
+from pyskl.datasets.pipelines import Compose
 
 @DATASETS.register_module()
 class VideoDataset(BaseDataset):
