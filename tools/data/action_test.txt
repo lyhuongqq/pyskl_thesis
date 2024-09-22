@@ -1,0 +1,12 @@
+D:\pyskl-main\pyskl-main\frame\0\0_Grasp_video.mp4 1
+D:\pyskl-main\pyskl-main\frame\0\0_Move_video.mp4 2
+D:\pyskl-main\pyskl-main\frame\0\0_Negative_video.mp4 3
+D:\pyskl-main\pyskl-main\frame\0\0_Position_video.mp4 4
+D:\pyskl-main\pyskl-main\frame\0\0_Reach_video.mp4 5
+D:\pyskl-main\pyskl-main\frame\0\0_Release_video.mp4 6
+D:\pyskl-main\pyskl-main\frame\2\2_Grasp_video.mp4 1
+D:\pyskl-main\pyskl-main\frame\2\2_Move_video.mp4 2
+D:\pyskl-main\pyskl-main\frame\2\2_Negative_video.mp4 3
+D:\pyskl-main\pyskl-main\frame\2\2_Position_video.mp4 4
+D:\pyskl-main\pyskl-main\frame\2\2_Reach_video.mp4 5
+D:\pyskl-main\pyskl-main\frame\2\2_Release_video.mp4 6
