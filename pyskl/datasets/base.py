@@ -3,6 +3,7 @@
 import copy
 import mmcv
 import numpy as np
+import os
 import os.path as osp
 import torch
 import warnings
@@ -11,9 +12,14 @@ from collections import OrderedDict, defaultdict
 from mmcv.utils import print_log
 from torch.utils.data import Dataset
 
+import sys
+# Add the parent directory to the sys.path
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 from pyskl.smp import auto_mix2
-from ..core import mean_average_precision, mean_class_accuracy, top_k_accuracy
-from .pipelines import Compose
+#from ..core import mean_average_precision, mean_class_accuracy, top_k_accuracy
+from pyskl.core import mean_average_precision, mean_class_accuracy, top_k_accuracy
+#from .pipelines import Compose
+from pyskl.datasets.pipelines import Compose
 
 
 class BaseDataset(Dataset, metaclass=ABCMeta):
