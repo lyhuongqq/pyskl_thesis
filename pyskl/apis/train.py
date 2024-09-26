@@ -6,7 +6,7 @@ import time
 import torch
 import torch.distributed as dist
 from mmcv.engine import multi_gpu_test
-from mmcv.parallel import MMDistributedDataParallel
+from mmcv.parallel import MMDistributedDataParallel, MMDataParallel
 from mmcv.runner import DistSamplerSeedHook, EpochBasedRunner, OptimizerHook, build_optimizer, get_dist_info
 
 from ..core import DistEvalHook
@@ -90,12 +90,16 @@ def train_model(model,
     find_unused_parameters = cfg.get('find_unused_parameters', True)
     # Sets the `find_unused_parameters` parameter in
     # torch.nn.parallel.DistributedDataParallel
-    model = MMDistributedDataParallel(
-        model.cuda(),
-        device_ids=[torch.cuda.current_device()],
-        broadcast_buffers=False,
-        find_unused_parameters=find_unused_parameters)
-
+    #model=model.cuda()
+    #device_ids=[1]
+    #model = MMDistributedDataParallel(
+    #    model.cuda(),
+    #    device_ids=[torch.cuda.current_device()],
+    #    broadcast_buffers=False,
+    #    find_unused_parameters=find_unused_parameters)
+    
+    # With this line for single-GPU use:
+    model = MMDataParallel(model.cuda(), device_ids=[0])  # Assuming you are using GPU 0
     # build runner
     optimizer = build_optimizer(model, cfg.optimizer)
 
@@ -118,7 +122,7 @@ def train_model(model,
     runner.register_training_hooks(cfg.lr_config, optimizer_config,
                                    cfg.checkpoint_config, cfg.log_config,
                                    cfg.get('momentum_config', None))
-    runner.register_hook(DistSamplerSeedHook())
+    #runner.register_hook(DistSamplerSeedHook())
 
     eval_hook = None
     if validate:
