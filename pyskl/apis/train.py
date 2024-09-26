@@ -147,7 +147,7 @@ def train_model(model,
 
     runner.run(data_loaders, cfg.workflow, cfg.total_epochs)
 
-    dist.barrier()
+    #dist.barrier()
     time.sleep(2)
 
     if test['test_last'] or test['test_best']:
