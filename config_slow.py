@@ -21,10 +21,12 @@ model = dict(
 )
 
 dataset_type = 'PoseDataset'
-ann_file = r"/root/pyskl_thesis/hand_pose_dataset.pkl"  # Path to your hand pose dataset pickle file
+ann_file = r"/root/pyskl_thesis/hand_pose_dataset_0.pkl"  # Path to your hand pose dataset pickle file
 
-left_kp = [1, 3, 5, 7, 9, 11, 13, 15]
-right_kp = [2, 4, 6, 8, 10, 12, 14, 16]
+#left_kp = list(range(21))  # Left hand keypoints [0, 1, 2, ..., 20]
+#right_kp = list(range(21, 42))  # Right hand keypoints [21, 22, 23, ..., 41]
+
+hand_kp = list(range(21)) # 21 keypoints for a single hand
 
 train_pipeline = [
     dict(type='UniformSampleFrames', clip_len=10),
@@ -33,7 +35,7 @@ train_pipeline = [
     dict(type='Resize', scale=(-1, 64)),
     dict(type='RandomResizedCrop', area_range=(0.56, 1.0)),
     dict(type='Resize', scale=(56, 56), keep_ratio=False),
-    dict(type='Flip', flip_ratio=0.5, left_kp=left_kp, right_kp=right_kp),
+    dict(type='Flip', flip_ratio=0.5), #left_kp=left_kp, right_kp=right_kp), # No left/right keypoint flipping necessary for single hand
     dict(type='GeneratePoseTarget', with_kp=True, with_limb=False),
     dict(type='FormatShape', input_format='NCTHW_Heatmap'),
     dict(type='Collect', keys=['imgs', 'label'], meta_keys=[]),
@@ -54,7 +56,7 @@ test_pipeline = [
     dict(type='PoseDecode'),
     dict(type='PoseCompact', hw_ratio=1., allow_imgpad=True),
     dict(type='Resize', scale=(64, 64), keep_ratio=False),
-    dict(type='GeneratePoseTarget', with_kp=True, with_limb=False, double=True, left_kp=left_kp, right_kp=right_kp),
+    dict(type='GeneratePoseTarget', with_kp=True, with_limb=False, double=False), #, left_kp=left_kp, right_kp=right_kp), # No need for double=False with single hand
     dict(type='FormatShape', input_format='NCTHW_Heatmap'),
     dict(type='Collect', keys=['imgs', 'label'], meta_keys=[]),
     dict(type='ToTensor', keys=['imgs'])
@@ -81,7 +83,7 @@ checkpoint_config = dict(interval=1)
 evaluation = dict(interval=1, metrics=['top_k_accuracy', 'mean_class_accuracy'], topk=(1, 5))
 log_config = dict(interval=20, hooks=[dict(type='TextLoggerHook')])
 log_level = 'INFO'
-work_dir = './work_dirs/posec3d/test_slow'
+work_dir = './work_dirs/posec3d/test_slow_mp'
 
 # device setting for GPU
 device = 'cuda'
