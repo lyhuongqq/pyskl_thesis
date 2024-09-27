@@ -12,3 +12,4 @@ pymemcache
 scipy
 torch>=1.5
 tqdm
+scikit-learn
