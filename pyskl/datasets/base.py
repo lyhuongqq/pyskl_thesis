@@ -20,7 +20,7 @@ from pyskl.smp import auto_mix2
 from pyskl.core import mean_average_precision, mean_class_accuracy, top_k_accuracy
 #from .pipelines import Compose
 from pyskl.datasets.pipelines import Compose
-
+from sklearn.metrics import precision_score, recall_score, f1_score
 
 class BaseDataset(Dataset, metaclass=ABCMeta):
     """Base class for datasets.
