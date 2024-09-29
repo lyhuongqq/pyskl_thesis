@@ -110,6 +110,8 @@ class BaseDataset(Dataset, metaclass=ABCMeta):
 
     @staticmethod
     def label2array(num, label):
+        if num <= 0:
+          raise ValueError(f'num_classes must be greater than 0, but got {num}')
         arr = np.zeros(num, dtype=np.float32)
         arr[label] = 1.
         return arr
