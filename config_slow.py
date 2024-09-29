@@ -21,7 +21,7 @@ model = dict(
 )
 
 dataset_type = 'PoseDataset'
-ann_file = r"/root/pyskl_thesis/hand_pose_dataset_0.pkl"  # Path to your hand pose dataset pickle file
+ann_file = r"/root/pyskl_thesis/hand_pose_dataset_val.pkl"  # Path to your hand pose dataset pickle file
 
 #left_kp = list(range(21))  # Left hand keypoints [0, 1, 2, ..., 20]
 #right_kp = list(range(21, 42))  # Right hand keypoints [21, 22, 23, ..., 41]
@@ -32,7 +32,7 @@ train_pipeline = [
     dict(type='UniformSampleFrames', clip_len=10),
     dict(type='PoseDecode'),
     dict(type='PoseCompact', hw_ratio=1., allow_imgpad=True),
-    dict(type='Resize', scale=(-1, 64)),
+    #dict(type='Resize', scale=(-1, 64)),
     dict(type='RandomResizedCrop', area_range=(0.56, 1.0)),
     dict(type='Resize', scale=(56, 56), keep_ratio=False),
     dict(type='Flip', flip_ratio=0.5), #left_kp=left_kp, right_kp=right_kp), # No left/right keypoint flipping necessary for single hand
@@ -42,7 +42,7 @@ train_pipeline = [
     dict(type='ToTensor', keys=['imgs', 'label'])
 ]
 val_pipeline = [
-    dict(type='UniformSampleFrames', clip_len=48, num_clips=1),
+    dict(type='UniformSampleFrames', clip_len=10, num_clips=1),
     dict(type='PoseDecode'),
     dict(type='PoseCompact', hw_ratio=1., allow_imgpad=True),
     dict(type='Resize', scale=(64, 64), keep_ratio=False),
@@ -52,7 +52,7 @@ val_pipeline = [
     dict(type='ToTensor', keys=['imgs'])
 ]
 test_pipeline = [
-    dict(type='UniformSampleFrames', clip_len=48, num_clips=10),
+    dict(type='UniformSampleFrames', clip_len=10, num_clips=1),
     dict(type='PoseDecode'),
     dict(type='PoseCompact', hw_ratio=1., allow_imgpad=True),
     dict(type='Resize', scale=(64, 64), keep_ratio=False),
@@ -80,10 +80,11 @@ optimizer_config = dict(grad_clip=dict(max_norm=40, norm_type=2))
 lr_config = dict(policy='CosineAnnealing', by_epoch=False, min_lr=0)
 total_epochs = 24
 checkpoint_config = dict(interval=1)
-evaluation = dict(interval=1, metrics=['top_k_accuracy', 'mean_class_accuracy'], topk=(1, 5))
+evaluation = dict(interval=1, metrics=['top_k_accuracy', 'mean_class_accuracy', 'mean_average_precision','binary_precision_recall_curve',
+                                        'precision', 'recall', 'f1_score'], topk=(1, 5))
 log_config = dict(interval=20, hooks=[dict(type='TextLoggerHook')])
 log_level = 'INFO'
-work_dir = './work_dirs/posec3d/test_slow_mp'
+work_dir = './work_dirs/posec3d/test_slow_mp_val'
 
 # device setting for GPU
 device = 'cuda'
