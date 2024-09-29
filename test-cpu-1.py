@@ -6,15 +6,19 @@ import os
 import os.path as osp
 import time
 import torch
+import torch.distributed as dist
 from mmcv import Config
 from mmcv import digit_version as dv
 from mmcv import load
-from mmcv.runner import get_dist_info, load_checkpoint
+from mmcv.cnn import fuse_conv_bn
+from mmcv.engine import multi_gpu_test
 from mmcv.fileio.io import file_handlers
+from mmcv.parallel import MMDistributedDataParallel
+from mmcv.runner import get_dist_info, init_dist, load_checkpoint
 
 from pyskl.datasets import build_dataloader, build_dataset
 from pyskl.models import build_model
-from pyskl.utils import cache_checkpoint
+from pyskl.utils import cache_checkpoint, mc_off, mc_on, test_port
 
 
 def parse_args():
@@ -22,24 +26,24 @@ def parse_args():
     parser.add_argument('config', help='test config file path')
     parser.add_argument('-C', '--checkpoint', help='checkpoint file', default=None)
     parser.add_argument('--out', default=None, help='output result file in pkl/yaml/json format')
-    parser.add_argument('--fuse-conv-bn', action='store_true',
-                        help='Whether to fuse conv and bn, this will slightly increase inference speed')
+    parser.add_argument('--fuse-conv-bn', action='store_true', help='Whether to fuse conv and bn')
     parser.add_argument('--eval', type=str, nargs='+', default=['top_k_accuracy', 'mean_class_accuracy'],
-                        help='evaluation metrics, which depends on the dataset, e.g., "top_k_accuracy", "mean_class_accuracy" for video dataset')
-    parser.add_argument('--tmpdir', help='tmp directory used for collecting results from multiple workers')
-    parser.add_argument('--average-clips', choices=['score', 'prob', None], default=None,
-                        help='average type when averaging test clips')
+                        help='evaluation metrics for the dataset')
+    parser.add_argument('--tmpdir', help='tmp directory for multiple workers')
+    parser.add_argument('--average-clips', choices=['score', 'prob', None], default=None, help='average type for test clips')
     parser.add_argument('--launcher', choices=['pytorch', 'slurm'], default='pytorch', help='job launcher')
-    parser.add_argument('--compile', action='store_true',
-                        help='whether to compile the model before training / testing (only available in pytorch 2.0)')
+    parser.add_argument('--compile', action='store_true', help='whether to compile the model (PyTorch 2.0)')
     parser.add_argument('--local_rank', type=int, default=-1)
     args = parser.parse_args()
+
+    if 'LOCAL_RANK' not in os.environ:
+        os.environ['LOCAL_RANK'] = str(args.local_rank)
 
     return args
 
 
 def inference_pytorch(args, cfg, data_loader):
-    """Get predictions using PyTorch models running on CPU."""
+    """Get predictions by pytorch models."""
     if args.average_clips is not None:
         if cfg.model.get('test_cfg') is None and cfg.get('test_cfg') is None:
             cfg.model.setdefault('test_cfg', dict(average_clips=args.average_clips))
@@ -51,30 +55,43 @@ def inference_pytorch(args, cfg, data_loader):
 
     # build the model and load checkpoint
     model = build_model(cfg.model)
-    
     if dv(torch.__version__) >= dv('2.0.0') and args.compile:
         model = torch.compile(model)
 
-    # Load checkpoint
     if args.checkpoint is None:
         work_dir = cfg.work_dir
         args.checkpoint = osp.join(work_dir, 'latest.pth')
-        assert osp.exists(args.checkpoint), "Checkpoint file not found."
+        assert osp.exists(args.checkpoint)
 
     args.checkpoint = cache_checkpoint(args.checkpoint)
-    load_checkpoint(model, args.checkpoint, map_location='cpu')  # Force loading on CPU
+    load_checkpoint(model, args.checkpoint, map_location='cpu')
 
-    # No need for MMDistributedDataParallel on CPU, running inference directly
-    model = model.to('cpu')  # Ensure the model is on CPU
+    if args.fuse_conv_bn:
+        model = fuse_conv_bn(model)
 
-    outputs = []  # Placeholder for outputs
-    model.eval()
+    #model = MMDistributedDataParallel(
+    #    model.cuda(),
+    #    device_ids=[torch.cuda.current_device()],
+    #    broadcast_buffers=False
+    #)
+    
+    # Instead, just move the model to CUDA
+    model = model.cuda()
 
-    # Process batches
-    for i, data in enumerate(data_loader):
+    # Perform inference
+    print("Starting inference...")
+    #outputs = multi_gpu_test(model, data_loader, args.tmpdir)
+    # Loop over the data loader and move data to GPU before model inference
+    outputs = []
+    for data in data_loader:
+        # Move input data to GPU
+        imgs = data['imgs'].cuda()  # Adjust this if your input tensor is named differently
         with torch.no_grad():
-            result = model(return_loss=False, **data)
+            result = model(return_loss=False, imgs=imgs)  # Forward pass
         outputs.append(result)
+    
+    
+    print("Inference completed. Outputs: ", outputs)
 
     return outputs
 
@@ -82,12 +99,11 @@ def inference_pytorch(args, cfg, data_loader):
 def main():
     args = parse_args()
 
+    # Load config
     cfg = Config.fromfile(args.config)
-
-    # Define output file
     out = osp.join(cfg.work_dir, 'result.pkl') if args.out is None else args.out
 
-    # Load eval_config from cfg
+    # Evaluation config cleanup
     eval_cfg = cfg.get('evaluation', {})
     keys = ['interval', 'tmpdir', 'start', 'save_best', 'rule', 'by_epoch', 'broadcast_bn_buffers']
     for key in keys:
@@ -95,39 +111,71 @@ def main():
     if args.eval:
         eval_cfg['metrics'] = args.eval
 
+    # Ensure output directory exists
     mmcv.mkdir_or_exist(osp.dirname(out))
     _, suffix = osp.splitext(out)
-    #assert suffix[1:] in mmcv.fileio.file_handlers, \
-    #    ('The format of the output file should be json, pickle or yaml')
-   
-    assert suffix[1:] in file_handlers, ('The format of the output file should be json, pickle or yaml')
-    # Ensure the model runs on CPU
-    torch.backends.cudnn.benchmark = False  # Not needed for CPU
-    cfg.data.test.test_mode = True
+    assert suffix[1:] in file_handlers, 'Output file should be json, pickle or yaml format'
 
-    # Build the dataset and dataloader
+    # Enable cudnn benchmark if applicable
+    if cfg.get('cudnn_benchmark', False):
+        torch.backends.cudnn.benchmark = True
+
+    cfg.data.test.test_mode = True
+    if not hasattr(cfg, 'dist_params'):
+        cfg.dist_params = dict(backend='nccl')
+
+    rank, world_size = get_dist_info()
+    cfg.gpu_ids = []  # Change this based on your GPU setup if needed
+
+    # Build dataset and dataloader
     dataset = build_dataset(cfg.data.test, dict(test_mode=True))
     dataloader_setting = dict(
-        videos_per_gpu=cfg.data.get('videos_per_gpu', 1),  # Adjust for CPU
-        workers_per_gpu=cfg.data.get('workers_per_gpu', 1),  # Adjust for CPU
+        videos_per_gpu=cfg.data.get('videos_per_gpu', 1),
+        workers_per_gpu=cfg.data.get('workers_per_gpu', 1),
         shuffle=False
     )
-    dataloader_setting = dict(dataloader_setting, **cfg.data.get('test_dataloader', {}))
+    dataloader_setting.update(cfg.data.get('test_dataloader', {}))
     data_loader = build_dataloader(dataset, **dataloader_setting)
 
-    # Perform inference
+    # Debug: Check if the dataset is loading correctly
+    for batch in data_loader:
+        print("Loaded batch: ", batch)
+        break  # Check the first batch for debugging
+
+    # Check memcached
+    default_mc_cfg = ('localhost', 22077)
+    memcached = cfg.get('memcached', False)
+
+    if rank == 0 and memcached:
+        mc_cfg = cfg.get('mc_cfg', default_mc_cfg)
+        assert isinstance(mc_cfg, tuple) and mc_cfg[0] == 'localhost'
+        if not test_port(mc_cfg[0], mc_cfg[1]):
+            mc_on(port=mc_cfg[1], launcher=args.launcher)
+        retry = 3
+        while not test_port(mc_cfg[0], mc_cfg[1]) and retry > 0:
+            time.sleep(5)
+            retry -= 1
+        assert retry >= 0, 'Failed to launch memcached.'
+
+    # Inference
     outputs = inference_pytorch(args, cfg, data_loader)
 
-    # Save the outputs
-    if len(outputs) > 0:
-        print(f'\nwriting results to {out}')
+    # Handle empty outputs before evaluation
+    if len(outputs) == 0:
+        print("No valid outputs generated, skipping evaluation.")
+        return
+
+    # Evaluate
+    if rank == 0:
+        print(f'\nWriting results to {out}')
         dataset.dump_results(outputs, out=out)
         if eval_cfg:
             eval_res = dataset.evaluate(outputs, **eval_cfg)
             for name, val in eval_res.items():
-                print(f'{name}: {val:.04f}') #val
-    else:
-        print('No valid outputs were generated.')
+                print(f'{name}: {val:.04f}')
+
+    if rank == 0 and memcached:
+        mc_off()
 
 
 if __name__ == '__main__':
