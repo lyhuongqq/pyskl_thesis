@@ -1,10 +1,12 @@
-import cv2
+import cv2 
 import mediapipe as mp
 import numpy as np
 import pickle
 from pathlib import Path
+
 mp_drawing = mp.solutions.drawing_utils
 mp_hands = mp.solutions.hands
+
 # Initialize MediaPipe Hand Pose model
 mp_hands = mp.solutions.hands
 hands = mp_hands.Hands(static_image_mode=False, max_num_hands=1, min_detection_confidence=0.4, min_tracking_confidence=0.5)
@@ -19,18 +21,12 @@ def extract_hand_keypoints_and_scores(video_path, augmentation="original"):
     keypoints = []
     keypoints_scores = []
     
+    #hands = mp_hands.Hands(min_detection_confidence=0.4, min_tracking_confidence=0.5, max_num_hands=1)
+
     while cap.isOpened():
         ret, frame = cap.read()
         if not ret:
             break
-        
-        # Apply augmentation
-        #if augmentation == "flip-vert":
-        #    frame = cv2.flip(frame, 0)
-        #elif augmentation == "flip-hor":
-        #    frame = cv2.flip(frame, 1)
-        #elif augmentation == "flip-hor-vert":
-        #    frame = cv2.flip(frame, -1)
         
         # Augmentation and color conversion
         if augmentation == "original":
@@ -42,25 +38,33 @@ def extract_hand_keypoints_and_scores(video_path, augmentation="original"):
         elif augmentation == "flip-hor-vert":
             frame_rgb = cv2.cvtColor(cv2.flip(frame, -1), cv2.COLOR_BGR2RGB)
 
-        #frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        #result = hands.process(frame_rgb)
+        # To improve performance, optionally mark the image as not writeable to pass by reference.
         frame_rgb.flags.writeable = False
-        result = hands.process(frame_rgb)
+        results = hands.process(frame_rgb)
         frame_rgb.flags.writeable = True
         frame_bgr = cv2.cvtColor(frame_rgb, cv2.COLOR_RGB2BGR)
-
-        if result.multi_hand_landmarks:
-            hand_landmarks = result.multi_hand_landmarks[0]  # Single hand
-            keypoint = np.array([[lm.x, lm.y] for lm in hand_landmarks.landmark], dtype=np.float32)  # Shape [21, 2]
+        
+        if results.multi_hand_landmarks:
+            hand_landmarks = results.multi_hand_landmarks[0]  # Assuming single hand
+            keypoint = np.array([[lm.x, lm.y] for lm in hand_landmarks.landmark], dtype=np.float32)  # Shape [21, 3]
             keypoint_score = np.array([lm.visibility for lm in hand_landmarks.landmark], dtype=np.float32)  # Shape [21]
+            # Optionally draw hand landmarks
+            #mp_drawing.draw_landmarks(frame_bgr, hand_landmarks, mp_hands.HAND_CONNECTIONS)
         else:
+            # If no hand landmarks are detected, fill with zeros
             keypoint = np.zeros((21, 2), dtype=np.float32)
             keypoint_score = np.zeros(21, dtype=np.float32)
-
+        
         keypoints.append(keypoint)
         keypoints_scores.append(keypoint_score)
+
+        # Display the result (for debugging or visualization)
+        #cv2.imshow('MediaPipe Hands', frame_bgr)
+        #if cv2.waitKey(1) & 0xFF == 27:
+        #    break
     
     cap.release()
+    #cv2.destroyAllWindows()
     
     keypoints = np.array(keypoints, dtype=np.float32)  # Shape [T, 21, 2]
     keypoints_scores = np.array(keypoints_scores, dtype=np.float32)  # Shape [T, 21]
@@ -104,7 +108,8 @@ def process_videos_and_save_pickle(video_label_txt, train_txt, eval_txt, output_
             }[aug]
             
             keypoints, keypoint_scores, total_frames, img_shape = extract_hand_keypoints_and_scores(video_path, aug)
-            print(f"Processing {video_path} with {aug_suffix}, keypoints shape: {keypoints.shape}, scores shape: {keypoint_scores.shape}")
+            
+            print(f"Processing {video_path} with {aug_suffix}, keypoints shape: {keypoints}, scores shape: {keypoint_scores}")
             
             annotations.append({
                 'frame_dir': Path(video_path).stem + f"_{aug_suffix}",
@@ -116,13 +121,13 @@ def process_videos_and_save_pickle(video_label_txt, train_txt, eval_txt, output_
                 'keypoint_score': keypoint_scores[np.newaxis, ...]  # Shape [1, T, V]
             })
     
-    # Load split files for train and eval
+    # Load split files for train and val
     train_videos = load_split_file(train_txt)
-    val_videos = load_split_file(eval_txt)
+    val_videos = load_split_file(eval_txt)  # Changed 'eval' to 'val' to match expected key
     
     split_dict = {
         'train': [Path(video).stem for video in train_videos],
-        'val': [Path(video).stem for video in val_videos]
+        'val': [Path(video).stem for video in val_videos]  # Changed 'eval' to 'val'
     }
     
     # Save everything to pickle
@@ -132,14 +137,17 @@ def process_videos_and_save_pickle(video_label_txt, train_txt, eval_txt, output_
     }
     
     with open(output_pickle, 'wb') as f:
-        pickle.dump(data, f)
+        pickle.dump(data, f) #, protocol=pickle.HIGHEST_PROTOCOL)
     
     print(f"Data with augmentations saved to {output_pickle}")
 
-# Example usage
-video_label_txt = r"D:\pyskl-main\pyskl-main\frame\video_label_1.txt"  # Input text file containing video paths and labels
-train_txt = r"D:\pyskl-main\pyskl-main\frame\train.txt"  # File containing train video paths
-eval_txt = r"D:\pyskl-main\pyskl-main\frame\eval.txt"  # File containing eval video paths
-output_pickle = 'hand_pose_dataset_with_aug_5.pkl'  # Output pickle file
 
-process_videos_and_save_pickle(video_label_txt, train_txt, eval_txt, output_pickle)
+# Example usage
+video_label_txt = r"D:\pyskl-main\pyskl-main\frame\video_label_2.txt"  # Input text file containing video paths and labels
+train_txt = r"D:\pyskl-main\pyskl-main\frame\train.txt"
+#train_txt = " "   # File containing train video paths
+eval_txt = r"D:\pyskl-main\pyskl-main\frame\eval.txt"  # File containing eval video paths
+output_pickle = 'hand_pose_dataset_aug_val_5.pkl'
+  # Output pickle file
+
+process_videos_and_save_pickle(video_label_txt, train_txt=None, eval_txt=eval_txt, output_pickle=output_pickle)
