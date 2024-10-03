@@ -69,15 +69,28 @@ def inference_pytorch(args, cfg, data_loader):
     if args.fuse_conv_bn:
         model = fuse_conv_bn(model)
 
-    model = MMDistributedDataParallel(
-        model.cuda(),
-        device_ids=[torch.cuda.current_device()],
-        broadcast_buffers=False
-    )
+    #model = MMDistributedDataParallel(
+    #    model.cuda(),
+    #    device_ids=[torch.cuda.current_device()],
+    #    broadcast_buffers=False
+    #)
+    
+    # Instead, just move the model to CUDA
+    model = model.cuda()
 
     # Perform inference
     print("Starting inference...")
-    outputs = multi_gpu_test(model, data_loader, args.tmpdir)
+    #outputs = multi_gpu_test(model, data_loader, args.tmpdir)
+    # Loop over the data loader and move data to GPU before model inference
+    outputs = []
+    for data in data_loader:
+        # Move input data to GPU
+        imgs = data['imgs'].cuda()  # Adjust this if your input tensor is named differently
+        with torch.no_grad():
+            result = model(return_loss=False, imgs=imgs)  # Forward pass
+        outputs.append(result)
+    
+    
     print("Inference completed. Outputs: ", outputs)
 
     return outputs
