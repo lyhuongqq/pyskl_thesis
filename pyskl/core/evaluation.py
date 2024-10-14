@@ -53,33 +53,36 @@ def confusion_matrix(y_pred, y_real, normalize=None):
     if normalize not in ['true', 'pred', 'all', None]:
         raise ValueError("normalize must be one of {'true', 'pred', "
                          "'all', None}")
-     # Ensure y_pred and y_real are 1D arrays
+    print("y_pred:", y_pred)
+    print("y_real:", y_real)
+
+    # Ensure y_pred is a numpy array
     if isinstance(y_pred, list):
         y_pred = np.array(y_pred)
-    if not isinstance(y_pred, np.ndarray):
-        raise TypeError(
-            f'y_pred must be list or np.ndarray, but got {type(y_pred)}')
-    if not y_pred.dtype == np.int64:
-        raise TypeError(
-            f'y_pred dtype must be np.int64, but got {y_pred.dtype}')
+    # Cast y_pred to np.int64
+    y_pred = y_pred.astype(np.int64)
 
+    
+    #if not isinstance(y_pred, np.ndarray):
+    #    raise TypeError(
+    #        f'y_pred must be list or np.ndarray, but got {type(y_pred)}')
+    #if not y_pred.dtype == np.int64:
+    #    raise TypeError(
+    #        f'y_pred dtype must be np.int64, but got {y_pred.dtype}')
+    
+    # Ensure y_real is a numpy array
     if isinstance(y_real, list):
         y_real = np.array(y_real)
-    if not isinstance(y_real, np.ndarray):
-        raise TypeError(
-            f'y_real must be list or np.ndarray, but got {type(y_real)}')
-    if not y_real.dtype == np.int64:
-        raise TypeError(
-            f'y_real dtype must be np.int64, but got {y_real.dtype}')
-    
-        # If y_pred is 2D, use np.argmax to extract class labels
-    if len(y_pred.shape) > 1:
-        y_pred = np.argmax(y_pred, axis=1)
+    #if not isinstance(y_real, np.ndarray):
+    #    raise TypeError(
+    #        f'y_real must be list or np.ndarray, but got {type(y_real)}')
+    #if not y_real.dtype == np.int64:
+    #    raise TypeError(
+    #        f'y_real dtype must be np.int64, but got {y_real.dtype}')
 
-    # Ensure both y_pred and y_real are 1D
-    if y_pred.ndim != 1 or y_real.ndim != 1:
-        raise ValueError('Both y_pred and y_real must be 1D arrays.')
-    
+    # Cast y_real to np.int64
+    y_real = y_real.astype(np.int64)
+
     label_set = np.unique(np.concatenate((y_pred, y_real)))
     num_labels = len(label_set)
     max_label = label_set[-1]
@@ -118,26 +121,7 @@ def mean_class_accuracy(scores, labels):
     Returns:
         np.ndarray: Mean class accuracy.
     """
-    #pred = np.argmax(scores, axis=1)
-    #cf_mat = confusion_matrix(pred, labels).astype(float)
-
-    #cls_cnt = cf_mat.sum(axis=1)
-    #cls_hit = np.diag(cf_mat)
-
-    #mean_class_acc = np.mean(
-    #    [hit / cnt if cnt else 0.0 for cnt, hit in zip(cls_cnt, cls_hit)])
-
-    #return mean_class_acc
-        # Convert list of scores to a NumPy array if it's a list
-    if isinstance(scores, list):
-        scores = np.array(scores)
-     # Ensure scores are converted to predicted class indices
-    if len(scores.shape) > 1:  # Check if the predictions have more than one dimension
-        pred = np.argmax(scores, axis=1)
-    else:
-        pred = scores
-
-    # Now pred and labels should have the same dimension (1D arrays)
+    pred = np.argmax(scores, axis=1)
     cf_mat = confusion_matrix(pred, labels).astype(float)
 
     cls_cnt = cf_mat.sum(axis=1)
