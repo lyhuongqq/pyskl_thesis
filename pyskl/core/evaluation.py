@@ -1,7 +1,7 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import numpy as np
 from mmcv.runner import DistEvalHook as BasicDistEvalHook
-
+from sklearn.metrics import accuracy_score, f1_score, recall_score, confusion_matrix
 
 class DistEvalHook(BasicDistEvalHook):
     greater_keys = [
@@ -35,7 +35,46 @@ class DistEvalHook(BasicDistEvalHook):
         assert n is not None
         return self.every_n_epochs(runner, n)
 
+def compute_metrics(scores, labels):
+    """Compute per-class metrics for accuracy, F1 score, and recall.
 
+    Args:
+        scores (np.ndarray): Prediction scores for each class, shape (num_samples, num_classes).
+        labels (np.ndarray): Ground truth labels, shape (num_samples,).
+
+    Returns:
+        dict: Dictionary containing accuracy, F1 score, and recall for each class.
+    """
+    # Get predicted labels
+    preds = np.argmax(scores, axis=1)
+
+    # Compute confusion matrix
+    cf_matrix = confusion_matrix(labels, preds)
+
+    # Calculate accuracy for each class
+    class_accuracies = np.diag(cf_matrix) / cf_matrix.sum(axis=1)
+    overall_accuracy = accuracy_score(labels, preds)
+
+    # Calculate F1 score and recall for each class
+    per_class_f1 = f1_score(labels, preds, average=None)
+    per_class_recall = recall_score(labels, preds, average=None)
+
+    # Aggregate metrics
+    metrics = {
+        'overall_accuracy': overall_accuracy,
+        'class_accuracies': class_accuracies,
+        'class_f1_scores': per_class_f1,
+        'class_recall_scores': per_class_recall,
+    }
+        # Print metrics
+    print("Overall Accuracy:", overall_accuracy)
+    print("Per-Class Accuracies:", class_accuracies)
+    print("Per-Class F1 Scores:", per_class_f1)
+    print("Per-Class Recall Scores:", per_class_recall)
+    #metrics = compute_metrics(scores, labels)
+    #print("Metrics:", metrics)
+    return metrics
+    
 def confusion_matrix(y_pred, y_real, normalize=None):
     """Compute confusion matrix.
 
