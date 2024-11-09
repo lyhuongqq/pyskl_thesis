@@ -23,12 +23,12 @@ model = dict(
 dataset_type = 'PoseDataset'
 #ann_file = r"/root/pyskl_thesis/hand_pose_dataset_val.pkl"  # Path to your hand pose dataset pickle file
 #ann_file = r"/root/pyskl_thesis/hand_pose_dataset_aug_8.pkl"
-ann_file = r"D:\pyskl-main\hand_pose_dataset_aug_8.pkl"
+ann_file = r"/root/pyskl_thesis/hand_pose_dataset_aug_6.pkl"
 #left_kp = list(range(21))  # Left hand keypoints [0, 1, 2, ..., 20]
 #right_kp = list(range(21, 42))  # Right hand keypoints [21, 22, 23, ..., 41]
 hand_kp = list(range(21)) # 21 keypoints for a single hand
 train_pipeline = [
-    dict(type='UniformSampleFrames', clip_len=10),
+    dict(type='UniformSampleFrames', clip_len=20,num_clips=1),
     dict(type='PoseDecode'),
     dict(type='PoseCompact', hw_ratio=1., allow_imgpad=True),
     #dict(type='Resize', scale=(-1, 64)),
@@ -41,7 +41,7 @@ train_pipeline = [
     dict(type='ToTensor', keys=['imgs', 'label'])
 ]
 val_pipeline = [
-    dict(type='UniformSampleFrames', clip_len=10, num_clips=1),
+    dict(type='UniformSampleFrames', clip_len=20, num_clips=1),
     dict(type='PoseDecode'),
     dict(type='PoseCompact', hw_ratio=1., allow_imgpad=True),
     dict(type='Resize', scale=(64, 64), keep_ratio=False),
@@ -51,7 +51,7 @@ val_pipeline = [
     dict(type='ToTensor', keys=['imgs'])
 ]
 test_pipeline = [
-    dict(type='UniformSampleFrames', clip_len=10, num_clips=1),
+    dict(type='UniformSampleFrames', clip_len=20, num_clips=10),
     dict(type='PoseDecode'),
     dict(type='PoseCompact', hw_ratio=1., allow_imgpad=True),
     dict(type='Resize', scale=(64, 64), keep_ratio=False),
