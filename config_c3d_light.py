@@ -15,9 +15,9 @@ model = dict(
 
 dataset_type = 'PoseDataset'
 #ann_file = r"/root/pyskl_thesis/hand_pose_dataset_val.pkl"  # Path to your hand pose dataset pickle file
-ann_file = r"/root/pyskl_thesis/hand_pose_dataset_aug_8.pkl"
+ann_file = r"/root/pyskl_thesis/hand_pose_dataset_aug_6.pkl"
 train_pipeline = [
-    dict(type='UniformSampleFrames', clip_len=48),
+    dict(type='UniformSampleFrames', clip_len=20,num_clips=1),
     dict(type='PoseDecode'),
     dict(type='PoseCompact', hw_ratio=1., allow_imgpad=True),
     dict(type='Resize', scale=(-1, 64)),
@@ -30,7 +30,7 @@ train_pipeline = [
     dict(type='ToTensor', keys=['imgs', 'label'])
 ]
 val_pipeline = [
-    dict(type='UniformSampleFrames', clip_len=48, num_clips=1),
+    dict(type='UniformSampleFrames', clip_len=20, num_clips=1),
     dict(type='PoseDecode'),
     dict(type='PoseCompact', hw_ratio=1., allow_imgpad=True),
     dict(type='Resize', scale=(64, 64), keep_ratio=False),
@@ -40,7 +40,7 @@ val_pipeline = [
     dict(type='ToTensor', keys=['imgs'])
 ]
 test_pipeline = [
-    dict(type='UniformSampleFrames', clip_len=48, num_clips=10),
+    dict(type='UniformSampleFrames', clip_len=20, num_clips=10),
     dict(type='PoseDecode'),
     dict(type='PoseCompact', hw_ratio=1., allow_imgpad=True),
     dict(type='Resize', scale=(64, 64), keep_ratio=False),
@@ -64,9 +64,9 @@ optimizer = dict(type='SGD', lr=0.05, momentum=0.05, weight_decay=0.0003)
 optimizer_config = dict(grad_clip=dict(max_norm=40, norm_type=2))
 # learning policy
 lr_config = dict(policy='CosineAnnealing', by_epoch=False, min_lr=0)
-total_epochs = 240
+total_epochs = 100
 checkpoint_config = dict(interval=1)
 evaluation = dict(interval=1, metrics=['top_k_accuracy', 'mean_class_accuracy'], topk=(1, 5))
 log_config = dict(interval=20, hooks=[dict(type='TextLoggerHook')])
 log_level = 'INFO'
-work_dir = './work_dirs/posec3d/c3d_aug8/joint'
+work_dir = './work_dirs/c3d_aug8/test_100/joint'
