@@ -11,7 +11,7 @@ from .builder import DATASETS
 
 
 @DATASETS.register_module()
-class GestureDataset(BaseDataset):
+class GestureDataset2(BaseDataset):
     """Pose dataset for action recognition.
 
     Args:
@@ -23,9 +23,18 @@ class GestureDataset(BaseDataset):
     """
 
     label_names = [
-    'Grasp', 'Move', 'Position', 'Release', 'Reach','Negative' ], # Example labels
-  # 0
-
+        'Doing other things', 'Drumming Fingers', 'No gesture',  # 0
+        'Pulling Hand In', 'Pulling Two Fingers In', 'Pushing Hand Away', 'Pushing Two Fingers Away',  # 3
+        'Rolling Hand Backward', 'Rolling Hand Forward', 'Shaking Hand',  # 7
+        'Sliding Two Fingers Down', 'Sliding Two Fingers Left',  # 10
+        'Sliding Two Fingers Right', 'Sliding Two Fingers Up',  # 12
+        'Stop Sign', 'Swiping Down', 'Swiping Left', 'Swiping Right', 'Swiping Up',  # 14
+        'Dislike', 'Like', 'Turning Hand Clockwise', 'Turning Hand Counterclockwise',  # 19
+        'Zooming In With Full Hand', 'Zooming In With Two Fingers',  # 23
+        'Zooming Out With Full Hand', 'Zooming Out With Two Fingers',  # 25
+        'Call', 'Fist', 'Four', 'Mute', 'OK', 'One', 'Palm',  # 27
+        'Peace', 'Rock', 'Three-Middle', 'Three-Left', 'Two Up', 'No Gesture'  # 34
+    ]
 
     def __init__(self,
                  ann_file,
