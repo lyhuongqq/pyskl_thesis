@@ -5,10 +5,12 @@ mmcv-full==1.5.0
 mmdet==2.23.0
 mmpose==0.24.0
 moviepy
-numpy>=1.19.5
+#numpy>=1.19.5
+numpy==1.25
 opencv-contrib-python
 opencv-python
 pymemcache
 scipy
 torch>=1.5
 tqdm
+imblearn
