@@ -127,3 +127,8 @@ resample_pickle_data(
     input_file=r"D:\pyskl-main\hand_pose_dataset_combined_2Dec_modified.pkl",
     train_output_file=r"D:\pyskl-main\test_pkl\smotenn_train_2dec_Ja_combine.pkl",
     val_output_file=r"D:\pyskl-main\test_pkl\smotenn_val_2dec_Ja_combine.pkl")
+
+#resample_pickle_data(
+#    input_file=r"/root/pyskl_thesis/hand_pose_dataset_aug_6.pkl",
+#    train_output_file=r"D:\pyskl-main\test_pkl\smotenn_train_24Jan_paper_combine.pkl",
+#    val_output_file=r"D:\pyskl-main\test_pkl\smotenn_val_24Jan_paper_combine.pkl")
