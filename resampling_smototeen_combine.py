@@ -1,6 +1,6 @@
 import mmcv
 import numpy as np
-from imblearn.combine import SMOTETomek
+from imblearn.combine import SMOTEENN
 import os
 from collections import Counter
 
@@ -43,12 +43,12 @@ def resample_pickle_data(input_file, train_output_file, val_output_file):
         print("Original class distribution:", Counter(combined_labels))
 
         try:
-            print("Applying SMOTETomek.")
-            smotetomek = SMOTETomek()
-            X_resampled, y_resampled = smotetomek.fit_resample(combined_keypoints, combined_labels)
+            print("Applying SMOTEENN.")
+            smoteenn = SMOTEENN()
+            X_resampled, y_resampled = smoteenn.fit_resample(combined_keypoints, combined_labels)
             print(f"Resampling completed. Original size: {len(combined_keypoints)}, Resampled size: {len(X_resampled)}")
         except ValueError as e:
-            print(f"SMOTETomek failed: {e}. Using original data.")
+            print(f"SMOTEENN failed: {e}. Using original data.")
             X_resampled, y_resampled = combined_keypoints, combined_labels
 
         # Print resampled class distribution
@@ -112,7 +112,6 @@ def resample_pickle_data(input_file, train_output_file, val_output_file):
     print(f"Resampled train data saved to {train_output_file}.")
     print(f"Resampled validation data saved to {val_output_file}.")
 
-
 # Combine Labels Temporarily for SMOTETomek
 
 # Example usage
@@ -124,11 +123,6 @@ def resample_pickle_data(input_file, train_output_file, val_output_file):
 #Combine Labels Temporarily for SMOTEENN
 # Example usage
 resample_pickle_data(
-    input_file=r"D:\pyskl-main\hand_pose_dataset_combined_2Dec_modified.pkl",
-    train_output_file=r"D:\pyskl-main\test_pkl\smotenn_train_2dec_Ja_combine.pkl",
-    val_output_file=r"D:\pyskl-main\test_pkl\smotenn_val_2dec_Ja_combine.pkl")
-
-#resample_pickle_data(
-#    input_file=r"/root/pyskl_thesis/hand_pose_dataset_aug_6.pkl",
-#    train_output_file=r"D:\pyskl-main\test_pkl\smotenn_train_24Jan_paper_combine.pkl",
-#    val_output_file=r"D:\pyskl-main\test_pkl\smotenn_val_24Jan_paper_combine.pkl")
+    input_file=r"/root/pyskl_thesis/hand_pose_dataset_aug_6.pkl",
+    train_output_file=r"/root/pyskl-main\test_pkl\smotenn_train_24Jan_paper_combine.pkl",
+    val_output_file=r"/root/pyskl-main\test_pkl\smotenn_val_24Jan_paper_combine.pkl")
