@@ -1,7 +1,7 @@
 decord>=0.6.0
 fvcore
 matplotlib
-mmcv-full==1.5.0
+#mmcv-full==1.5.0
 mmdet==2.23.0
 mmpose==0.24.0
 moviepy
@@ -14,3 +14,7 @@ scipy
 torch>=1.5
 tqdm
 imblearn
+pandas
+#mmengine
+mediapipe
+#pip install mmcv-full -f https://download.openmmlab.com/mmcv/dist/cu118/torch2.1/index.html
